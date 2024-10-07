@@ -13,7 +13,7 @@ plt.rcParams.update({
     'ytick.labelsize': 9,       # font size for y-axis ticks
     'legend.fontsize': 10,       # font size for legend
     'lines.linewidth': 2.5,     # set linewidth
-    'lines.markersize': 8 ,    # set markersize
+    'lines.markersize': 8.5,    # set markersize
     'markers.fillstyle': 'none'
 })
 
@@ -26,6 +26,7 @@ site_names = {
 
 header_names = {
     'TVOC': 'Combined Ozone Precursors',
+    'summed': 'Summed Ozone Precursors',
     'BTEX': 'BTEX Compounds',
     'Benzene': 'Benzene',
     'Toluene': 'Toluene',
@@ -56,6 +57,13 @@ ppb_conversions = {
 }
 
 valid_years = [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+
+complete_years = {
+    'DECO': [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023],
+    'PVCO': [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023],
+    'BFCO': [2020, 2021, 2022, 2023],
+    'MPCO': [2022, 2023]
+}
 
 def bar_charts(data_dict, parameter, units):
     """
@@ -133,12 +141,21 @@ def line_plot(data_dict, parameter, units):
         # replace all 0's with nans
         df[parameter] = df[parameter].replace(0, np.nan)
 
-        # plot
-        ax.plot(df['Year'], df[parameter], marker=site_markers[site], color=site_colors[site], label=site_names[site])
+        # get subset based on years with 75% complete data
+        complete_df = df[df['Year'].isin(complete_years[site])]
 
+        # get df of data not in that list
+        incomplete_df = df[~df['Year'].isin(complete_years[site])]
+
+        # plot complete data
+        ax.plot(complete_df['Year'], complete_df[parameter], marker=site_markers[site], color=site_colors[site], label=site_names[site])
+
+        # plot incomplete as scatter points (uncomment if desired)
+        # ax.scatter(incomplete_df['Year'], incomplete_df[parameter], color=site_colors[site], marker=site_markers[site], alpha=0.6)
+        
     ax.set_ylabel(f'{header_names[parameter]} ({units})')
 
-    #ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0)
 
     ax.set_xticks(valid_years)
     ax.set_xticklabels(valid_years, rotation=45, ha='right')
@@ -166,9 +183,9 @@ def line_subplots(data_dict):
             # replace all 0's with nans
             df[compound] = df[compound].replace(0, np.nan)
 
-            if compound != 'BTEX':
-                # convert to ppbV
-                df[compound] = df[compound] / ppb_conversions[compound]
+            # get subset based on years with 75% complete data
+            df = df[df['Year'].isin(complete_years[site])]
+
 
             # plot site data 
             axes[i].plot(df['Year'], df[compound], marker=site_markers[site], color=site_colors[site], label=site_names[site])
@@ -177,10 +194,7 @@ def line_subplots(data_dict):
             axes[i].set_title(header_names[compound])
 
             # label yaxis
-            if i == 0:
-                axes[i].set_ylabel('(ppbC)')
-            else:
-                axes[i].set_ylabel('(ppbV)')
+            axes[i].set_ylabel('(ppbV)')
     
             # set xticks
             axes[i].set_xticks(valid_years)
@@ -194,7 +208,7 @@ def line_subplots(data_dict):
     plt.show()
 
 
-def stacked_line(data_dict, units):
+def stacked_line(data_dict):
     """
     Plots a stacked line chart for the BTEX compounds
 
@@ -203,7 +217,7 @@ def stacked_line(data_dict, units):
     - units: ppbV or ppbC
     """
 
-    fig, axes = plt.subplots(nrows=len(data_dict.keys()), figsize=(7,8), sharex=True)
+    fig, axes = plt.subplots(nrows=len(data_dict.keys()), figsize=(7,8), sharex=True, sharey=True)
 
     compounds = ['Benzene', 'Toluene', 'Ethylbenzene', 'Xylene']
     colors=['#FF7F7F', '#9EDAE5', '#FFBB78', '#C5B0D5']
